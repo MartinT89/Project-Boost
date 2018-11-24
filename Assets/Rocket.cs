@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class Rocket : MonoBehaviour {
 
+    [SerializeField]float rcsThrust = 100f;
+    [SerializeField] float mainThrust = 35f;
     Rigidbody rocketBody;
     AudioSource audioSource;
 
@@ -16,25 +18,19 @@ public class Rocket : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        ProcessInput();
-	}
-
-    private void ProcessInput()
-    {
         ThrustAndSound();
         RotationControls();
-    }
 
-    private void RotationControls()
-    {
-        if (Input.GetKey(KeyCode.A))
-        {
-            transform.Rotate(Vector3.forward);
-        }
+	}
 
-        else if (Input.GetKey(KeyCode.D))
-        {
-            transform.Rotate(-Vector3.forward);
+    void OnCollisionEnter(Collision collision) {
+        switch (collision.gameObject.tag) {
+            case "Friendly":
+                print("OK");
+                break;
+            default:
+                print("dead");
+                break;
         }
     }
 
@@ -42,8 +38,7 @@ public class Rocket : MonoBehaviour {
     {
         if (Input.GetKey(KeyCode.Space))
         { //can thrust while rotating 
-
-            rocketBody.AddRelativeForce(Vector3.up);
+            rocketBody.AddRelativeForce(Vector3.up * mainThrust);
 
             if (!audioSource.isPlaying)     //no layering of audio
             {
@@ -57,4 +52,23 @@ public class Rocket : MonoBehaviour {
             audioSource.Stop();
         }
     }
+
+    private void RotationControls()
+    {
+        rocketBody.freezeRotation = true; // take manual control of rotation
+        float rotationThisFrame = rcsThrust * Time.deltaTime; //independent of the frame 
+
+        if (Input.GetKey(KeyCode.A))
+        {
+            transform.Rotate(Vector3.forward * rotationThisFrame);
+        }
+
+        else if (Input.GetKey(KeyCode.D))
+        {
+            transform.Rotate(-Vector3.forward * rotationThisFrame);
+        }
+
+        rocketBody.freezeRotation = false; // resume physics control of rotation 
+    }
+
 }
