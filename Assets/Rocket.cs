@@ -2,47 +2,96 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Rocket : MonoBehaviour {
 
     [SerializeField]float rcsThrust = 100f;
     [SerializeField] float mainThrust = 35f;
+    [SerializeField] AudioClip mainEngine, explosion, loading;
+    [SerializeField] ParticleSystem mainEngineP, explosionP, loadingP;
+    [SerializeField] int nextLevel;
     Rigidbody rocketBody;
     AudioSource audioSource;
+
+    enum State {Alive, Dying, Transcending };
+    State state = State.Alive;
 
 	// Use this for initialization
 	void Start () {
         rocketBody = GetComponent<Rigidbody>();
         audioSource = GetComponent<AudioSource>();
-	}
+    }
 	
 	// Update is called once per frame
 	void Update () {
-        ThrustAndSound();
-        RotationControls();
+
+        if (state == State.Alive)
+        {
+
+            ThrustAndSound();
+            RotationControls();
+
+        }
 
 	}
 
-    void OnCollisionEnter(Collision collision) {
-        switch (collision.gameObject.tag) {
+    void OnCollisionEnter(Collision collision)
+    {
+
+        if (state != State.Alive)
+        {
+            return;
+        }
+
+        switch (collision.gameObject.tag)
+        {
             case "Friendly":
-                print("OK");
+                break;
+            case "Finish":
+                SoundOnCollision(loading);
+                loadingP.Play();
+                state = State.Transcending;
+                Invoke("LoadNextScene", 1f);
                 break;
             default:
-                print("dead");
+                SoundOnCollision(explosion);
+                explosionP.Play();
+                state = State.Dying;
+                Invoke("DyingReload", 1f);
                 break;
         }
+    }
+
+    private void SoundOnCollision(AudioClip clip)
+    {
+        if (audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
+        audioSource.PlayOneShot(clip);
+    }
+
+    private void DyingReload()
+    {
+        SceneManager.LoadScene(0);
+    }
+
+    private void LoadNextScene()
+    {
+        SceneManager.LoadScene(nextLevel);
     }
 
     private void ThrustAndSound()
     {
         if (Input.GetKey(KeyCode.Space))
         { //can thrust while rotating 
-            rocketBody.AddRelativeForce(Vector3.up * mainThrust);
+            rocketBody.AddRelativeForce(Vector3.up * mainThrust * Time.deltaTime);
 
             if (!audioSource.isPlaying)     //no layering of audio
             {
-                audioSource.Play();
+                audioSource.PlayOneShot(mainEngine);
+                mainEngineP.Play();
             }
 
         }
@@ -50,6 +99,7 @@ public class Rocket : MonoBehaviour {
         else
         {
             audioSource.Stop();
+            mainEngineP.Stop();
         }
     }
 
